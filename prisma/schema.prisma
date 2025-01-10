@@ -1,0 +1,168 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["user", "conversation", "message"]
+}
+
+enum Gender {
+    MALE
+    FEMALE
+
+    @@schema("user")
+}
+
+enum Role {
+    ADMIN
+    USER
+
+    @@schema("user")
+}
+
+enum ConversationType {
+    PRIVATE
+    GROUP
+
+    @@schema("conversation")
+}
+
+enum MessageType {
+    TEXT
+    IMAGE
+    VIDEO
+    AUDIO
+    FILE
+    GIF
+    STICKER
+    LOCATION
+
+    POLL // message contains polls or surveys
+    
+    @@schema("message")
+}
+
+enum UserStatus {
+    ONLINE
+    OFFLINE
+    
+    @@schema("user")
+}
+
+model User {
+    id BigInt @id @db.BigInt
+
+    email String @db.Text @unique
+    username String @db.Text @unique
+    firstName String @db.Text @map("first_name")
+    lastName String @db.Text @map("last_name")
+    password String @db.Text
+    birthday DateTime
+    gender Gender
+    role Role
+    phoneNumber String @db.Text @map("phone_number")
+    privacy String? @db.Text
+    status UserStatus
+    lastActiveAt DateTime @default(now()) @map("last_active_at")
+    avatarUrl String? @db.Text @map("avatar_url")
+    refreshTokens String[] @db.Text @map("refresh_tokens")
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime? @map("updated_at")
+    deletedAt DateTime? @map("deleted_at")
+
+    participants Participant[]
+    messages Message[]
+    conversations Conversation[]
+
+    @@map("user")
+    @@schema("user")
+}
+
+model Conversation {
+    id BigInt @id @db.BigInt
+
+    type ConversationType
+    createdAt DateTime @default(now()) @map("created_at")
+    deletedAt DateTime? @map("deleted_at")
+
+    creator User @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+    creatorId BigInt @db.BigInt @map("creator_id")
+    group Group?
+    participants Participant[]
+    messages Message[]
+
+    @@map("conversation")
+    @@schema("conversation")
+}
+
+model Group {
+    id BigInt @id @db.BigInt
+
+    name String @db.Text
+    avatarUrl String? @db.Text @map("avatar_url")
+    permission String? @db.Text
+    updatedAt DateTime @map("updated_at")
+
+    conversation Conversation @relation(fields: [id], references: [id], onDelete: Cascade) 
+    conversationId BigInt @db.BigInt @map("conversation_id")
+
+    @@map("group")
+    @@schema("conversation")
+}
+
+model Participant {
+    id BigInt @id @db.BigInt
+
+    joinedAt DateTime @default(now()) @map("joined_at")
+    leftAt DateTime? @map("left_at")
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId BigInt @db.BigInt @map("user_id")
+    conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+    conversationId BigInt @db.BigInt @map("conversation_id")
+
+    @@map("participant")
+    @@schema("conversation")
+}
+
+model Message {
+    id BigInt @id @db.BigInt
+
+    content String @db.Text
+    type MessageType
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime? @map("updated_at")
+    deletedAt DateTime? @map("deleted_at")
+
+    sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+    senderId BigInt @db.BigInt 
+    receiver Conversation @relation(fields: [receiverId], references: [id], onDelete: Cascade)
+    receiverId BigInt @db.BigInt
+    attachments Attachment[]
+
+    @@map("message")
+    @@schema("message")
+}
+
+model Attachment {
+    id BigInt @id @db.BigInt
+
+    thumbUrl String @db.Text @map("thumb_url") // thumbnail for image or video
+    fileUrl String @db.Text @map("file_url")
+    deletedAt DateTime? @map("deleted_at")
+
+    message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+    messageId BigInt @db.BigInt @map("message_id")
+
+    @@map("attachment")
+    @@schema("message")
+}

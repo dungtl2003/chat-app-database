@@ -1,0 +1,15 @@
+services:
+  pgdb:
+    container_name: chat-app-db
+    image: postgres:13.5
+    environment:
+      POSTGRES_DB: chat-app
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: testpass123
+    volumes:
+      - chat-app-db-data:/var/lib/postgresql/data
+    ports:
+      - "6000:5432"
+
+volumes:
+  chat-app-db-data:
